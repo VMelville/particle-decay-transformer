@@ -274,7 +274,7 @@ class PositionalEncoding(nn.Module):
         return x + self.pe[:, :seq_len]
 
 class TransformerDecayModel(nn.Module):
-    def __init__(self, vocab_size, d_model=64, nhead=4, num_layers=2):
+    def __init__(self, vocab_size, d_model=64, nhead=4, num_layers=2, dim_feedforward=256):
         super().__init__()
         self.embed = nn.Embedding(vocab_size, d_model)
         self.pos_encoder = PositionalEncoding(d_model)
@@ -282,7 +282,7 @@ class TransformerDecayModel(nn.Module):
         # Transformerのエンコーダを複数層重ねる
         enc_layer = nn.TransformerEncoderLayer(
             d_model=d_model, nhead=nhead,
-            dim_feedforward=4*d_model,
+            dim_feedforward=dim_feedforward,
             batch_first=True
         )
         self.transformer_encoder = nn.TransformerEncoder(enc_layer, num_layers=num_layers)
@@ -314,9 +314,10 @@ class TransformerDecayModel(nn.Module):
 ##############################################################
 model = TransformerDecayModel(
     vocab_size=vocab_size,
-    d_model=128,
-    nhead=8,
-    num_layers=4
+    d_model=8,
+    nhead=2,
+    num_layers=2,
+    dim_feedforward=1
 ).to(device)
 
 optimizer = optim.Adam(model.parameters(), lr=1e-3)
@@ -345,7 +346,7 @@ def train_one_epoch(model, loader, optimizer, criterion):
     return total_loss / len(loader)
 
 # デモ的に数エポックのみ
-for epoch in range(10):
+for epoch in range(50):
     loss = train_one_epoch(model, train_loader, optimizer, criterion)
     print(f"Epoch {epoch+1} - loss: {loss:.4f}")
 
@@ -383,11 +384,22 @@ def generate_sequence(model, start_particle, max_length=6):
 ##############################################################
 # (8) 推論テスト
 ##############################################################
-test_mothers = ["Om-", "Xi0", "Si-", "La", "K-", "p", "mu-", "pi0"]
+test_mothers = [
+    "ph",
+    "ne", "ne~", "nm", "nm~",
+    "e-", "e+",
+    "mu-", "mu+",
+    "pi0", "pi-", "pi+",
+    "K-", "K+",
+    "p", "p~", "n", "n~",
+    "La", "La~",
+    "Si+", "Si+~", "Si0", "Si0~", "Si-", "Si-~",
+    "Xi0", "Xi0~", "Xi-", "Xi+~",
+    "Om-", "Om+~"
+    ]
 print("=== Generation Examples ===")
 for mother in test_mothers:
     if mother not in particle_vocab:
         continue
     seq = generate_sequence(model, "M" + mother, max_length=6)
     print(mother, "->", " ".join(seq[1:-1]))
-
